@@ -29,19 +29,13 @@ Time：2024.10.22 15:04
 作者讨论了分数匹配（Score Matching）的原理，这是一种用于学习非归一化统计模型的方法，它基于来自未知数据分布的独立同分布（i.i.d.）样本。分数匹配的目标是直接训练一个分数网络 $s_{\theta}(x)$ 来估计数据分布的梯度 $\nabla_x \log p_{\text{data}}(x)$，而不需要先训练一个模型来估计 $p_{\text{data}}(x)$。
 
 分数匹配的优化目标是最小化以下表达式：
-$$
-\frac{1}{2} \mathbb{E}_{p_{\text{data}}} \left[ \left\| s_{\theta}(x) - \nabla_x \log p_{\text{data}}(x) \right\|^2_2 \right]
-$$
+$$\frac{1}{2} \mathbb{E}_{p_{\text{data}}} \left[ \left\| s_{\theta}(x) - \nabla_x \log p_{\text{data}}(x) \right\|^2_2 \right]$$
 这个目标可以证明等价于以下表达式（忽略一个常数项）：
-$$
-\mathbb{E}_{p_{\text{data}}} \left[ \text{tr} \left( \nabla_x s_{\theta}(x) \right) + \frac{1}{2} \left\| s_{\theta}(x) \right\|^2_2 \right]
-$$
+$$\mathbb{E}_{p_{\text{data}}} \left[ \text{tr} \left( \nabla_x s_{\theta}(x) \right) + \frac{1}{2} \left\| s_{\theta}(x) \right\|^2_2 \right]$$
 其中，$\nabla_x s_{\theta}(x)$ 表示 $s_{\theta}(x)$ 的雅可比矩阵（Jacobian matrix）。
 
 在某些正则性条件下，上述方程的最小化解（记作 $s_{\theta^*}(x)$）满足：
-$$
-s_{\theta^*}(x) = \nabla_x \log p_{\text{data}}(x) \quad \text{almost surely}
-$$
+$$s_{\theta^*}(x) = \nabla_x \log p_{\text{data}}(x) \quad \text{almost surely}$$
 在实践中，方程中的期望可以通过数据样本快速估计。然而，由于==需要计算雅可比矩阵的迹（trace）==，分数匹配并不适用于深度网络和高维数据。接下来，作者讨论了两种流行的分数匹配方法。这些方法旨在解决在深度网络和高维数据中计算雅可比矩阵迹的挑战。
 
 ### 解读 ''Denoising score matching Denoising''
@@ -49,19 +43,15 @@ $$
 ==**Denoising Score Matching**== 是一种分数匹配的变体，它完全避免了计算雅可比矩阵的迹（$\text{tr}(\nabla_x s_{\theta}(x))$）。这种方法首先用一个预先指定的噪声分布 $q_{\sigma}(\tilde{x} | x)$ 对数据点 $x$ 进行扰动，然后使用分数匹配来估计扰动后数据分布 $q_{\sigma}(\tilde{x})$ 的梯度，其中 $q_{\sigma}(\tilde{x}) = \int q_{\sigma}(\tilde{x} | x) p_{\text{data}}(x) dx$。
 
 Denoising Score Matching 的优化目标被证明等价于以下表达式：
-$$
-\frac{1}{2} \mathbb{E}_{q_{\sigma}(\tilde{x}|x) p_{\text{data}}(x)} \left[ \left\| s_{\theta}(\tilde{x}) - \nabla_{\tilde{x}} \log q_{\sigma}(\tilde{x} | x) \right\|^2_2 \right]
-$$
+$$\frac{1}{2} \mathbb{E}_{q_{\sigma}(\tilde{x}|x) p_{\text{data}}(x)} \left[ \left\| s_{\theta}(\tilde{x}) - \nabla_{\tilde{x}} \log q_{\sigma}(\tilde{x} | x) \right\|^2_2 \right]$$
 这个表达式的意义是：在真实数据分布和条件分布的联合分布下，计算模型输出与条件分布梯度之间的平方欧几里得距离的期望，并乘以系数 $\frac{1}{2}$。这个目标函数旨在通过最小化这个距离，使得模型生成的数据与真实数据分布相似，同时保持生成数据的多样性。
 如文献 [[2011-Denoise Score Matching.pdf]] 所示，最小化上述方程的最优分数网络（记作 $s_{\theta^*}(x)$）满足：
-$$
-s_{\theta^*}(x) = \nabla_x \log q_{\sigma}(x) \quad \text{almost surely}
-$$
+$$s_{\theta^*}(x) = \nabla_x \log q_{\sigma}(x) \quad \text{almost surely}$$
 然而，$s_{\theta^*}(x) = \nabla_x \log q_{\sigma}(x) \approx \nabla_x \log p_{\text{data}}(x)$ 只有在噪声足够小，使得 $q_{\sigma}(x) \approx p_{\text{data}}(x)$ 时才成立。
 
 这种方法的动机是，通过在数据点上添加噪声，我们可以更容易地估计梯度，因为噪声可以平滑数据分布，使得梯度更容易估计。此外，通过选择适当的噪声分布，我们可以控制扰动的程度，从而在估计梯度时获得更好的性能。
 
-### 解读 ''Sliced score matching
+### 解读 ''Sliced score matching''
 Sliced score matching [[2019-Sliced Score Matching.pdf]] 是一种用于生成模型的优化方法，它通过随机投影来近似梯度的迹（trace）操作，这是在原始的 score matching 方法中需要计算的。Sliced score matching 的目标函数如下：
 $$\mathbb{E}_{p_v}[\mathbb{E}_{p_{\text{data}}} \left[ v^{\top} \nabla_{x} s_{\theta}(x) v + \frac{1}{2} \| s_{\theta}(x) \|^2_2 \right]]$$
 这里，$p_v$ 是一个简单的随机向量分布，例如多变量标准正态分布。$\mathbb{E}_{p_v}$ 表示在随机向量分布 $p_v$ 下的期望，而 $\mathbb{E}_{p_{\text{data}}}$ 表示在真实数据分布 $p_{\text{data}}$ 下的期望。$v^{\top} \nabla_{x} s_{\theta}(x) v$ 是通过随机向量 $v$ 与模型 $s_{\theta}$ 的梯度的点积来近似梯度的迹。$\| s_{\theta}(x) \|^2_2$ 是模型输出的平方欧几里得范数。
@@ -77,9 +67,9 @@ Langevin dynamics 是一种从概率密度函数 $p(x)$ 生成样本的方法，
 
 Langevin dynamics 的采样过程如下：
 1. **初始化**：选择一个初始值 $x_0$，它通常从一个先验分布 $\pi(x)$ 中采样得到。
-2. **迭代更新**：在每一步 $t$，使用以下公式更新当前的样本 $x_t$：$$
-   x_{t+1} = x_t + \frac{\epsilon}{2} \nabla_x \log p(x_t) + \sqrt{\epsilon} z_t,
-   $$其中 $\epsilon > 0$ 是固定的步长，$z_t$ 是从标准正态分布 $N(0, I)$ 中采样的随机噪声。
+2. **迭代更新**：在每一步 $t$，使用以下公式更新当前的样本 $x_t$：
+$$x_{t+1} = x_t + \frac{\epsilon}{2} \nabla_x \log p(x_t) + \sqrt{\epsilon} z_t,$$
+其中 $\epsilon > 0$ 是固定的步长，$z_t$ 是从标准正态分布 $N(0, I)$ 中采样的随机噪声。
 3. **收敛**：当步长 $\epsilon$ 趋近于 0，迭代次数 $T$ 趋近于无穷大时，$x_T$ 的分布将收敛到 $p(x)$。在这种情况下，$x_T$ 可以被视为从 $p(x)$ 中精确采样得到的样本。
 4. **Metropolis-Hastings 校正**：当 $\epsilon > 0$ 且 $T < \infty$ 时，由于迭代公式的近似性质，可能需要使用 Metropolis-Hastings 算法来校正误差。**但在实践中，当 $\epsilon$ 较小且 $T$ 较大时，这种误差通常可以忽略。**
 
@@ -147,13 +137,9 @@ Manifold Hypothesis 是机器学习的一个核心概念，它指出现实世界
    
 4. 通过分数匹配学习 NCSN
    无论是 Sliced score matching 还是 Denoise score matching 都可以训练 NCSN。作者选择了 Denoise score matching，因为它快一些，并且自然适合估计扰动数据分布的分数。给定噪声分布 $q_{\sigma}(\tilde{x} | x) = N(\tilde{x} | x, \sigma^2 I)$，去噪分数匹配的目标函数为：
-$$
-\mathcal{L}(\theta; \sigma) = \frac{1}{2} \mathbb{E}_{p_{\text{data}}(x)}\mathbb{E}_{\tilde{x} \sim N(x, \sigma^2 I)} \left[ \left\| s_{\theta}(\tilde{x}, \sigma) + \frac{\tilde{x} - x}{\sigma^2} \right\|^2_2 \right]
-$$
+$$\mathcal{L}(\theta; \sigma) = \frac{1}{2} \mathbb{E}_{p_{\text{data}}(x)}\mathbb{E}_{\tilde{x} \sim N(x, \sigma^2 I)} \left[ \left\| s_{\theta}(\tilde{x}, \sigma) + \frac{\tilde{x} - x}{\sigma^2} \right\|^2_2 \right]$$
    然后，作者将所有 $\sigma \in \{\sigma_i\}_{i=1}^L$ 的目标函数组合起来，得到统一的目标函数：
-$$
-\mathcal{L}(\theta; \{\sigma_i\}_{i=1}^L) = \sum_{i=1}^L \lambda(\sigma_i) \mathcal{L}(\theta; \sigma_i)
-$$
+$$\mathcal{L}(\theta; \{\sigma_i\}_{i=1}^L) = \sum_{i=1}^L \lambda(\sigma_i) \mathcal{L}(\theta; \sigma_i)$$
    其中 $\lambda(\sigma_i) > 0$ 是依赖于 $\sigma_i$ 的系数函数。作者选择了 $\lambda(\sigma) = \sigma^2$，以确保不同 $\sigma$ 下的目标函数的量级大致相同。
 
 作者强调，他们的目标函数不需要对抗训练、替代损失，也不需要在训练过程中从分数网络中采样。它不要求 $s_{\theta}(x, \sigma)$ 具有特殊的架构以便可处理。当 $\lambda(\cdot)$ 和 $\{\sigma_i\}_{i=1}^L$ 固定时，它可以用来定量比较不同的 NCSN。
